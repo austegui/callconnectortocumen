@@ -121,6 +121,14 @@ app.get('/voice/token', (req, res) => {
   });
 });
 
+app.post('/client-log', (req, res) => {
+  const level = String(req.body.level || 'info').toLowerCase();
+  const message = String(req.body.message || '');
+  const details = req.body.details || null;
+  console.log(`[client-${level}] ${message}${details ? ` ${JSON.stringify(details)}` : ''}`);
+  res.sendStatus(204);
+});
+
 app.post('/voice/twiml/outbound', (req, res) => {
   const route = normalizeRoute(req.body.route || req.query.route);
   const destination = routeMap[route] || routeMap.default;
