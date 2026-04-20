@@ -31,12 +31,44 @@ const routeMap = {
   default: DEFAULT_DESTINATION
 };
 
+app.set('trust proxy', true);
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use((req, res, next) => {
+  const startedAt = Date.now();
+
+  res.on('finish', () => {
+    const durationMs = Date.now() - startedAt;
+    console.log(
+      `[http] ${req.method} ${req.originalUrl} ${res.statusCode} ${durationMs}ms origin=${req.get('origin') || '-'} referer=${req.get('referer') || '-'}`
+    );
+  });
+
+  next();
+});
 app.use(express.static(publicDir));
 
 app.get('/healthz', (_req, res) => {
   res.json({ ok: true });
+});
+
+app.get('/debug/voice', (req, res) => {
+  res.json({
+    ok: true,
+    baseUrl: getBaseUrl(req),
+    config: {
+      hasAccountSid: Boolean(TWILIO_ACCOUNT_SID),
+      hasApiKey: Boolean(TWILIO_API_KEY),
+      hasApiSecret: Boolean(TWILIO_API_SECRET),
+      hasTwimlAppSid: Boolean(TWILIO_TWIML_APP_SID),
+      hasCallerId: Boolean(TWILIO_CALLER_ID),
+      hasDefaultDestination: Boolean(DEFAULT_DESTINATION),
+      allowedOrigins: Array.from(allowedOrigins),
+      routes: Object.fromEntries(
+        Object.entries(routeMap).map(([key, value]) => [key, summarizeDestination(value)])
+      )
+    }
+  });
 });
 
 app.get('/widget/frame', (_req, res) => {
@@ -50,10 +82,14 @@ app.get('/embed.js', (_req, res) => {
 
 app.get('/voice/token', (req, res) => {
   if (!credentialsAreConfigured()) {
+    console.error('[voice-token] missing credentials');
     return res.status(500).json({ error: 'Twilio credentials are not configured.' });
   }
 
   if (!originIsAllowed(req)) {
+    console.error(
+      `[voice-token] origin blocked origin=${req.get('origin') || '-'} referer=${req.get('referer') || '-'}`
+    );
     return res.status(403).json({ error: 'Origin is not allowed.' });
   }
 
@@ -76,6 +112,8 @@ app.get('/voice/token', (req, res) => {
 
   token.addGrant(voiceGrant);
 
+  console.log(`[voice-token] issued identity=${identity} routeHint=${req.query.route || '-'}`);
+
   res.json({
     token: token.toJwt(),
     identity,
@@ -86,6 +124,10 @@ app.get('/voice/token', (req, res) => {
 app.post('/voice/twiml/outbound', (req, res) => {
   const route = normalizeRoute(req.body.route || req.query.route);
   const destination = routeMap[route] || routeMap.default;
+
+  console.log(
+    `[voice-twiml] route=${route} destination=${summarizeDestination(destination)} from=${req.body.From || '-'} to=${req.body.To || '-'}`
+  );
 
   if (!destination) {
     return respondWithVoiceResponse(res, (voiceResponse) => {
@@ -117,6 +159,7 @@ app.post('/voice/twiml/outbound', (req, res) => {
 
 app.post('/voice/dial-action', (req, res) => {
   const status = String(req.body.DialCallStatus || '').toLowerCase();
+  console.log(`[voice-dial-action] status=${status || '-'} route=${req.query.route || '-'}`);
 
   respondWithVoiceResponse(res, (voiceResponse) => {
     if (status === 'completed' || status === 'answered') {
@@ -193,4 +236,16 @@ function respondWithVoiceResponse(res, buildResponse) {
   buildResponse(voiceResponse);
   res.type('text/xml');
   res.send(voiceResponse.toString());
+}
+
+function summarizeDestination(destination) {
+  if (!destination) {
+    return null;
+  }
+
+  if (destination.startsWith('client:') || destination.startsWith('sip:')) {
+    return destination;
+  }
+
+  return destination.replace(/.(?=.{4})/g, '*');
 }
