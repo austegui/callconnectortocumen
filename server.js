@@ -34,6 +34,16 @@ const routeMap = {
 app.set('trust proxy', true);
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use((req, _res, next) => {
+  const [path, query = ''] = req.url.split('?');
+  const normalizedPath = path.replace(/\/{2,}/g, '/');
+
+  if (normalizedPath !== path) {
+    req.url = query ? `${normalizedPath}?${query}` : normalizedPath;
+  }
+
+  next();
+});
 app.use((req, res, next) => {
   const startedAt = Date.now();
 
