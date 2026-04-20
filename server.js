@@ -155,7 +155,21 @@ function originIsAllowed(req) {
   }
 
   const origin = req.get('origin');
-  return origin ? allowedOrigins.has(origin) : false;
+  if (origin) {
+    return allowedOrigins.has(origin);
+  }
+
+  const referer = req.get('referer');
+  if (!referer) {
+    return true;
+  }
+
+  try {
+    const refererOrigin = new URL(referer).origin;
+    return allowedOrigins.has(refererOrigin);
+  } catch (_error) {
+    return false;
+  }
 }
 
 function normalizeRoute(value) {
