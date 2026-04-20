@@ -144,7 +144,7 @@ app.post('/voice/twiml/outbound', (req, res) => {
   const destination = routeMap[route] || routeMap.default;
 
   console.log(
-    `[voice-twiml] route=${route} destination=${summarizeDestination(destination)} from=${req.body.From || '-'} to=${req.body.To || '-'}`
+    `[voice-twiml] route=${route} destination=${summarizeDestination(destination)} from=${req.body.From || '-'} to=${req.body.To || '-'} body=${JSON.stringify(sanitizeWebhookBody(req.body))}`
   );
 
   if (!destination) {
@@ -177,7 +177,9 @@ app.post('/voice/twiml/outbound', (req, res) => {
 
 app.post('/voice/dial-action', (req, res) => {
   const status = String(req.body.DialCallStatus || '').toLowerCase();
-  console.log(`[voice-dial-action] status=${status || '-'} route=${req.query.route || '-'}`);
+  console.log(
+    `[voice-dial-action] status=${status || '-'} route=${req.query.route || '-'} body=${JSON.stringify(sanitizeWebhookBody(req.body))}`
+  );
 
   respondWithVoiceResponse(res, (voiceResponse) => {
     if (status === 'completed' || status === 'answered') {
@@ -266,4 +268,16 @@ function summarizeDestination(destination) {
   }
 
   return destination.replace(/.(?=.{4})/g, '*');
+}
+
+function sanitizeWebhookBody(body) {
+  const sanitized = { ...body };
+
+  for (const key of ['To', 'From', 'ForwardedFrom', 'Called']) {
+    if (sanitized[key]) {
+      sanitized[key] = summarizeDestination(String(sanitized[key]));
+    }
+  }
+
+  return sanitized;
 }
