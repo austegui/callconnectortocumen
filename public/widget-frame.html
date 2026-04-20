@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Voice Widget</title>
+    <link rel="stylesheet" href="/widget-frame.css" />
+  </head>
+  <body>
+    <main class="widget">
+      <div class="widget__card">
+        <p class="widget__eyebrow">Voice Support</p>
+        <h1 class="widget__title" id="title">Talk to us</h1>
+        <p class="widget__body" id="body">
+          Start a browser call with our team. We will ask for microphone access.
+        </p>
+
+        <div class="widget__status" id="status">Ready</div>
+
+        <div class="widget__actions">
+          <button class="widget__button" id="callButton" type="button">Call now</button>
+          <button class="widget__secondary" id="hangupButton" type="button" disabled>
+            Hang up
+          </button>
+        </div>
+
+        <a class="widget__fallback hidden" id="fallbackLink" href="#">Call by phone instead</a>
+
+        <p class="widget__fineprint">
+          Best on desktop browsers. On mobile, use the phone fallback when available.
+        </p>
+      </div>
+    </main>
+
+    <script src="/vendor/twilio.min.js"></script>
+    <script src="/widget-frame.js"></script>
+  </body>
+</html>

@@ -1,0 +1,129 @@
+:root {
+  color-scheme: light;
+  --accent: #0f766e;
+  --accent-strong: #115e59;
+  --border: #d9e2ec;
+  --surface: #ffffff;
+  --text: #17324d;
+  --muted: #5f7388;
+  --shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+  --bg: radial-gradient(circle at top left, #ecfeff, #f8fafc 60%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  font-family: "Segoe UI", Arial, sans-serif;
+  background: transparent;
+}
+
+.widget {
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 0;
+}
+
+.widget__card {
+  width: 100%;
+  min-height: 100vh;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: var(--bg);
+  box-shadow: var(--shadow);
+  color: var(--text);
+}
+
+.widget__eyebrow {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.widget__title {
+  margin: 0 0 10px;
+  font-size: 28px;
+  line-height: 1.1;
+}
+
+.widget__body {
+  margin: 0 0 20px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.widget__status {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid var(--border);
+  font-size: 14px;
+}
+
+.widget__actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.widget__button,
+.widget__secondary,
+.widget__fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  border-radius: 999px;
+  padding: 0 18px;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.widget__button {
+  border: 0;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  cursor: pointer;
+}
+
+.widget__secondary {
+  border: 1px solid var(--border);
+  background: #ffffff;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.widget__secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.widget__fallback {
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--text);
+}
+
+.widget__fineprint {
+  margin: 18px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.hidden {
+  display: none;
+}

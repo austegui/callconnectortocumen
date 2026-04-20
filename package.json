@@ -1,0 +1,19 @@
+{
+  "name": "twilio-web-call-widget",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Embeddable Twilio Voice website call widget starter",
+  "scripts": {
+    "postinstall": "node scripts/copy-sdk.mjs",
+    "prepare:sdk": "node scripts/copy-sdk.mjs",
+    "start": "node server.js",
+    "dev": "node server.js",
+    "check": "node --check server.js"
+  },
+  "dependencies": {
+    "@twilio/voice-sdk": "^2.18.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "twilio": "^5"
+  }
+}
