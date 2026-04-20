@@ -98,7 +98,7 @@ app.post('/voice/twiml/outbound', (req, res) => {
     const dial = voiceResponse.dial({
       callerId: TWILIO_CALLER_ID,
       answerOnBridge: true,
-      action: `${BASE_URL}/voice/dial-action?route=${encodeURIComponent(route)}`
+      action: `${getBaseUrl(req)}/voice/dial-action?route=${encodeURIComponent(route)}`
     });
 
     if (destination.startsWith('client:')) {
@@ -140,13 +140,24 @@ app.listen(port, () => {
 
 function credentialsAreConfigured() {
   return Boolean(
-    BASE_URL &&
-      TWILIO_ACCOUNT_SID &&
+    TWILIO_ACCOUNT_SID &&
       TWILIO_API_KEY &&
       TWILIO_API_SECRET &&
       TWILIO_TWIML_APP_SID &&
       TWILIO_CALLER_ID
   );
+}
+
+function getBaseUrl(req) {
+  if (BASE_URL) {
+    return BASE_URL;
+  }
+
+  const forwardedProto = req.get('x-forwarded-proto');
+  const proto = forwardedProto ? forwardedProto.split(',')[0].trim() : req.protocol;
+  const host = req.get('host');
+
+  return `${proto}://${host}`;
 }
 
 function originIsAllowed(req) {
