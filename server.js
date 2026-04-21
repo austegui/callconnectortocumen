@@ -1,7 +1,6 @@
 const path = require('path');
-const crypto = require('crypto');
 const express = require('express');
-const twilio = require('twilio');
+const Retell = require('retell-sdk').default;
 require('dotenv').config();
 
 const app = express();
@@ -10,12 +9,8 @@ const publicDir = path.join(__dirname, 'public');
 
 const {
   BASE_URL,
-  TWILIO_ACCOUNT_SID,
-  TWILIO_API_KEY,
-  TWILIO_API_SECRET,
-  TWILIO_TWIML_APP_SID,
-  TWILIO_CALLER_ID,
-  DEFAULT_DESTINATION,
+  RETELL_API_KEY,
+  DEFAULT_AGENT_ID,
   ALLOWED_ORIGINS = ''
 } = process.env;
 
@@ -26,24 +21,27 @@ const allowedOrigins = new Set(
 );
 
 const routeMap = {
-  sales: process.env.SALES_DESTINATION || DEFAULT_DESTINATION,
-  support: process.env.SUPPORT_DESTINATION || DEFAULT_DESTINATION,
-  default: DEFAULT_DESTINATION
+  sales: process.env.SALES_AGENT_ID || DEFAULT_AGENT_ID,
+  support: process.env.SUPPORT_AGENT_ID || DEFAULT_AGENT_ID,
+  default: DEFAULT_AGENT_ID
 };
+
+const retellClient = RETELL_API_KEY ? new Retell({ apiKey: RETELL_API_KEY }) : null;
 
 app.set('trust proxy', true);
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use((req, _res, next) => {
-  const [path, query = ''] = req.url.split('?');
-  const normalizedPath = path.replace(/\/{2,}/g, '/');
+  const [pathname, query = ''] = req.url.split('?');
+  const normalizedPath = pathname.replace(/\/{2,}/g, '/');
 
-  if (normalizedPath !== path) {
+  if (normalizedPath !== pathname) {
     req.url = query ? `${normalizedPath}?${query}` : normalizedPath;
   }
 
   next();
 });
+
 app.use((req, res, next) => {
   const startedAt = Date.now();
 
@@ -56,26 +54,23 @@ app.use((req, res, next) => {
 
   next();
 });
+
 app.use(express.static(publicDir));
 
 app.get('/healthz', (_req, res) => {
   res.json({ ok: true });
 });
 
-app.get('/debug/voice', (req, res) => {
+app.get('/debug/retell', (req, res) => {
   res.json({
     ok: true,
     baseUrl: getBaseUrl(req),
     config: {
-      hasAccountSid: Boolean(TWILIO_ACCOUNT_SID),
-      hasApiKey: Boolean(TWILIO_API_KEY),
-      hasApiSecret: Boolean(TWILIO_API_SECRET),
-      hasTwimlAppSid: Boolean(TWILIO_TWIML_APP_SID),
-      hasCallerId: Boolean(TWILIO_CALLER_ID),
-      hasDefaultDestination: Boolean(DEFAULT_DESTINATION),
+      hasRetellApiKey: Boolean(RETELL_API_KEY),
+      hasDefaultAgentId: Boolean(DEFAULT_AGENT_ID),
       allowedOrigins: Array.from(allowedOrigins),
       routes: Object.fromEntries(
-        Object.entries(routeMap).map(([key, value]) => [key, summarizeDestination(value)])
+        Object.entries(routeMap).map(([key, value]) => [key, summarizeId(value)])
       )
     }
   });
@@ -90,45 +85,50 @@ app.get('/embed.js', (_req, res) => {
   res.sendFile(path.join(publicDir, 'embed.js'));
 });
 
-app.get('/voice/token', (req, res) => {
-  if (!credentialsAreConfigured()) {
-    console.error('[voice-token] missing credentials');
-    return res.status(500).json({ error: 'Twilio credentials are not configured.' });
+app.post('/retell/web-call', async (req, res) => {
+  if (!retellConfigured()) {
+    console.error('[retell-web-call] missing configuration');
+    return res.status(500).json({ error: 'Retell credentials are not configured.' });
   }
 
   if (!originIsAllowed(req)) {
     console.error(
-      `[voice-token] origin blocked origin=${req.get('origin') || '-'} referer=${req.get('referer') || '-'}`
+      `[retell-web-call] origin blocked origin=${req.get('origin') || '-'} referer=${req.get('referer') || '-'}`
     );
     return res.status(403).json({ error: 'Origin is not allowed.' });
   }
 
-  const identity = `web-${crypto.randomUUID()}`;
-  const AccessToken = twilio.jwt.AccessToken;
-  const VoiceGrant = AccessToken.VoiceGrant;
-  const voiceGrant = new VoiceGrant({
-    outgoingApplicationSid: TWILIO_TWIML_APP_SID
-  });
+  const route = normalizeRoute(req.body.route || req.query.route);
+  const agentId = routeMap[route] || routeMap.default;
 
-  const token = new AccessToken(
-    TWILIO_ACCOUNT_SID,
-    TWILIO_API_KEY,
-    TWILIO_API_SECRET,
-    {
-      identity,
-      ttl: 60 * 10
-    }
-  );
+  if (!agentId) {
+    console.error(`[retell-web-call] missing agent for route=${route}`);
+    return res.status(500).json({ error: `No Retell agent is configured for route "${route}".` });
+  }
 
-  token.addGrant(voiceGrant);
+  try {
+    const webCall = await retellClient.call.createWebCall({
+      agent_id: agentId
+    });
 
-  console.log(`[voice-token] issued identity=${identity} routeHint=${req.query.route || '-'}`);
+    console.log(
+      `[retell-web-call] route=${route} agent=${summarizeId(agentId)} callId=${webCall.call_id || '-'}`
+    );
 
-  res.json({
-    token: token.toJwt(),
-    identity,
-    expiresInSeconds: 600
-  });
+    res.json({
+      accessToken: webCall.access_token,
+      callId: webCall.call_id,
+      agentId: webCall.agent_id,
+      expiresInSeconds: 30
+    });
+  } catch (error) {
+    console.error(
+      `[retell-web-call] failed route=${route} agent=${summarizeId(agentId)} error=${JSON.stringify(serializeRetellError(error))}`
+    );
+    res
+      .status(error?.status || 500)
+      .json({ error: extractRetellErrorMessage(error) || 'Retell web call could not be created.' });
+  }
 });
 
 app.post('/client-log', (req, res) => {
@@ -139,98 +139,10 @@ app.post('/client-log', (req, res) => {
   res.sendStatus(204);
 });
 
-app.post('/voice/twiml/outbound', (req, res) => {
-  const route = normalizeRoute(req.body.route || req.query.route);
-  const destination = routeMap[route] || routeMap.default;
-
-  console.log(
-    `[voice-twiml] route=${route} destination=${summarizeDestination(destination)} from=${req.body.From || '-'} to=${req.body.To || '-'} body=${JSON.stringify(sanitizeWebhookBody(req.body))}`
-  );
-
-  if (!destination) {
-    return respondWithVoiceResponse(res, (voiceResponse) => {
-      voiceResponse.say('We are unable to place this call right now.');
-      voiceResponse.hangup();
-    });
-  }
-
-  respondWithVoiceResponse(res, (voiceResponse) => {
-    const dialOptions = {
-      answerOnBridge: true,
-      action: `${getBaseUrl(req)}/voice/dial-action?route=${encodeURIComponent(route)}`
-    };
-
-    const callerId = getCallerIdForDestination(destination, req);
-    if (callerId) {
-      dialOptions.callerId = callerId;
-    }
-
-    const dial = voiceResponse.dial(dialOptions);
-
-    if (destination.startsWith('app:')) {
-      const application = dial.application({
-        copyParentTo: true
-      });
-      application.applicationSid(destination.replace(/^app:/, ''));
-      return;
-    }
-
-    if (destination.startsWith('application:')) {
-      const application = dial.application({
-        copyParentTo: true
-      });
-      application.applicationSid(destination.replace(/^application:/, ''));
-      return;
-    }
-
-    if (destination.startsWith('client:')) {
-      dial.client(destination.replace(/^client:/, ''));
-      return;
-    }
-
-    if (destination.startsWith('sip:')) {
-      dial.sip(destination);
-      return;
-    }
-
-    dial.number(destination);
-  });
-});
-
-app.all('/voice/twiml/receiver-test', (req, res) => {
-  console.log(`[voice-receiver-test] body=${JSON.stringify(sanitizeWebhookBody(req.body || {}))}`);
-
-  respondWithVoiceResponse(res, (voiceResponse) => {
-    voiceResponse.say(
-      {
-        voice: 'alice'
-      },
-      'Connection successful. Your internal Twilio application route is working.'
-    );
-    voiceResponse.pause({ length: 5 });
-    voiceResponse.hangup();
-  });
-});
-
-app.post('/voice/dial-action', (req, res) => {
-  const status = String(req.body.DialCallStatus || '').toLowerCase();
-  console.log(
-    `[voice-dial-action] status=${status || '-'} route=${req.query.route || '-'} body=${JSON.stringify(sanitizeWebhookBody(req.body))}`
-  );
-
-  respondWithVoiceResponse(res, (voiceResponse) => {
-    if (status === 'completed' || status === 'answered') {
-      voiceResponse.hangup();
-      return;
-    }
-
-    voiceResponse.say('Sorry, nobody is available right now. Please try again later.');
-    voiceResponse.hangup();
-  });
-});
-
-app.post('/voice/status', (req, res) => {
-  console.log('[voice-status]', JSON.stringify(req.body));
+app.post('/retell/webhook', (req, res) => {
+  const event = req.body?.event || 'unknown';
+  const callId = req.body?.call?.call_id || '-';
+  console.log(`[retell-webhook] event=${event} callId=${callId}`);
   res.sendStatus(204);
 });
 
@@ -238,14 +150,8 @@ app.listen(port, () => {
   console.log(`Widget server listening on http://localhost:${port}`);
 });
 
-function credentialsAreConfigured() {
-  return Boolean(
-    TWILIO_ACCOUNT_SID &&
-      TWILIO_API_KEY &&
-      TWILIO_API_SECRET &&
-      TWILIO_TWIML_APP_SID &&
-      TWILIO_CALLER_ID
-  );
+function retellConfigured() {
+  return Boolean(RETELL_API_KEY && DEFAULT_AGENT_ID && retellClient);
 }
 
 function getBaseUrl(req) {
@@ -255,9 +161,7 @@ function getBaseUrl(req) {
 
   const forwardedProto = req.get('x-forwarded-proto');
   const proto = forwardedProto ? forwardedProto.split(',')[0].trim() : req.protocol;
-  const host = req.get('host');
-
-  return `${proto}://${host}`;
+  return `${proto}://${req.get('host')}`;
 }
 
 function originIsAllowed(req) {
@@ -276,8 +180,7 @@ function originIsAllowed(req) {
   }
 
   try {
-    const refererOrigin = new URL(referer).origin;
-    return allowedOrigins.has(refererOrigin);
+    return allowedOrigins.has(new URL(referer).origin);
   } catch (_error) {
     return false;
   }
@@ -288,53 +191,40 @@ function normalizeRoute(value) {
   return normalized || 'default';
 }
 
-function respondWithVoiceResponse(res, buildResponse) {
-  const voiceResponse = new twilio.twiml.VoiceResponse();
-  buildResponse(voiceResponse);
-  res.type('text/xml');
-  res.send(voiceResponse.toString());
-}
-
-function summarizeDestination(destination) {
-  if (!destination) {
+function summarizeId(value) {
+  if (!value) {
     return null;
   }
 
-  if (destination.startsWith('client:') || destination.startsWith('sip:')) {
-    return destination;
-  }
-
-  return destination.replace(/.(?=.{4})/g, '*');
+  return String(value).replace(/.(?=.{4})/g, '*');
 }
 
-function sanitizeWebhookBody(body) {
-  const sanitized = { ...body };
-
-  for (const key of ['To', 'From', 'ForwardedFrom', 'Called']) {
-    if (sanitized[key]) {
-      sanitized[key] = summarizeDestination(String(sanitized[key]));
-    }
-  }
-
-  return sanitized;
+function serializeRetellError(error) {
+  return {
+    name: error?.name || 'Error',
+    message: error?.message || null,
+    status: error?.status || null,
+    code: error?.code || null,
+    response: error?.response || null
+  };
 }
 
-function getCallerIdForDestination(destination, req) {
-  if (!destination) {
-    return TWILIO_CALLER_ID || null;
-  }
-
-  if (destination.startsWith('client:')) {
-    return req.body.From || null;
-  }
-
-  if (destination.startsWith('sip:')) {
-    return 'call-connector';
-  }
-
-  if (destination.startsWith('app:') || destination.startsWith('application:')) {
+function extractRetellErrorMessage(error) {
+  if (!error) {
     return null;
   }
 
-  return TWILIO_CALLER_ID || null;
+  if (typeof error.message === 'string' && error.message) {
+    return error.message;
+  }
+
+  if (typeof error.error === 'string' && error.error) {
+    return error.error;
+  }
+
+  if (typeof error?.response?.error === 'string' && error.response.error) {
+    return error.response.error;
+  }
+
+  return null;
 }

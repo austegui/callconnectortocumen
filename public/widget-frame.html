@@ -9,10 +9,10 @@
   <body>
     <main class="widget">
       <div class="widget__card">
-        <p class="widget__eyebrow">Voice Support</p>
+        <p class="widget__eyebrow">AI Voice Assistant</p>
         <h1 class="widget__title" id="title">Talk to us</h1>
         <p class="widget__body" id="body">
-          Start a browser call with our team. We will ask for microphone access.
+          Start a browser conversation with our assistant. We will ask for microphone access.
         </p>
 
         <div class="widget__status" id="status">Ready</div>
@@ -27,12 +27,14 @@
         <a class="widget__fallback hidden" id="fallbackLink" href="#">Call by phone instead</a>
 
         <p class="widget__fineprint">
-          Best on desktop browsers. On mobile, use the phone fallback when available.
+          Powered by Retell Web Call. On mobile, use the phone fallback when available.
         </p>
       </div>
     </main>
 
-    <script src="/vendor/twilio.min.js"></script>
+    <script src="/vendor/eventemitter3.min.js"></script>
+    <script src="/vendor/livekit-client.umd.js"></script>
+    <script src="/vendor/retell-client.umd.js"></script>
     <script src="/widget-frame.js"></script>
   </body>
 </html>

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="A polished website call widget demo powered by Twilio Voice and delivered as a simple client-side embed."
+      content="A polished website call widget demo powered by Retell Web Call and delivered as a simple client-side embed."
     />
     <title>Call Connector for Tocumen</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -681,7 +681,7 @@
             <h1>One script. One click. One real voice call.</h1>
             <p>
               This page presents the widget exactly the way a client should see it: premium,
-              frictionless, and ready to embed. Visitors can launch a Twilio-powered call from the
+              frictionless, and ready to embed. Visitors can launch an AI voice call from the
               website while your infrastructure retains control of routing, credentials, and
               experience design.
             </p>
@@ -720,11 +720,11 @@
                   <h2>Website voice calling, presented with polish.</h2>
                   <p>
                     The live widget is already running on this page. It loads as a hosted embed,
-                    keeps Twilio credentials off the client site, and gives your team a clean path
+                    keeps Retell credentials on your side, and gives your team a clean path
                     to deploy, brand, and scale the experience.
                   </p>
                   <div class="signal-row">
-                    <span class="signal">Twilio Voice JS</span>
+                    <span class="signal">Retell Web Call</span>
                     <span class="signal">Hosted iframe embed</span>
                     <span class="signal">DigitalOcean ready</span>
                   </div>
@@ -746,7 +746,7 @@
             <h2>What the client receives</h2>
             <p>
               A turnkey integration that feels enterprise-grade but installs like a marketing
-              pixel. The client only embeds a script; the call logic, token creation, and Twilio
+              pixel. The client only embeds a script; the call logic, token creation, and Retell
               routing stay on your side.
             </p>
           </div>
@@ -761,8 +761,8 @@
             <article class="feature reveal delay-2">
               <strong>Secure architecture</strong>
               <p>
-                Access tokens are issued server-side, destination routing is controlled centrally,
-                and clients never touch Twilio secrets.
+                Access tokens are issued server-side, agent routing is controlled centrally, and
+                clients never touch Retell secrets.
               </p>
             </article>
             <article class="feature reveal delay-3">
@@ -779,8 +779,8 @@
           <div class="section-header reveal">
             <h2>How the call flow works</h2>
             <p>
-              The implementation is intentionally clean: browser audio on the front end, Twilio
-              token issuance and voice routing on the back end, and a single hosted asset for the
+              The implementation is intentionally clean: browser audio on the front end, Retell web
+              call creation on the back end, and a single hosted asset for the
               client to drop in.
             </p>
           </div>
@@ -804,16 +804,16 @@
               <span class="step__num">3</span>
               <strong>Server mints the token</strong>
               <p>
-                Your backend creates the Twilio Voice access token and enforces the destination
-                rules you define.
+                Your backend creates the Retell web call and returns the short-lived access token
+                your browser widget needs.
               </p>
             </article>
             <article class="step reveal">
               <span class="step__num">4</span>
-              <strong>Twilio connects the call</strong>
+              <strong>Retell connects the call</strong>
               <p>
-                The browser call is bridged through your TwiML App to the correct agent, queue, SIP
-                target, or phone number.
+                The browser joins Retell directly over WebRTC, which avoids the PSTN issues that
+                can appear when web calls are forced through phone-number bridges.
               </p>
             </article>
           </div>
@@ -872,10 +872,10 @@
               </p>
             </article>
             <article class="trust reveal delay-2">
-              <strong>Twilio aligned</strong>
+              <strong>Retell aligned</strong>
               <p>
-                The architecture follows the supported Voice JavaScript SDK pattern with short-lived
-                access tokens and TwiML-driven outbound routing.
+                The architecture follows Retell's current Web Call pattern with server-created
+                access tokens and direct browser audio.
               </p>
             </article>
             <article class="trust reveal delay-3">

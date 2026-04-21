@@ -11,9 +11,9 @@ const callButton = document.getElementById('callButton');
 const hangupButton = document.getElementById('hangupButton');
 const fallbackLink = document.getElementById('fallbackLink');
 
-let device = null;
-let activeCall = null;
-let deviceReady = false;
+let client = null;
+let callActive = false;
+let isStarting = false;
 
 titleEl.textContent = title;
 callButton.textContent = buttonText;
@@ -30,145 +30,94 @@ callButton.addEventListener('click', startCall);
 hangupButton.addEventListener('click', hangUp);
 
 async function startCall() {
-  if (mobile && fallbackNumber) {
-    statusEl.textContent = 'Mobile browser detected. Phone fallback is recommended.';
-  }
-
-  if (!window.Twilio || !window.Twilio.Device) {
-    logClient('error', 'Twilio Voice SDK not available');
-    statusEl.textContent = 'Twilio Voice SDK is not available.';
+  if (callActive || isStarting) {
     return;
   }
 
+  if (mobile && fallbackNumber) {
+    statusEl.textContent = 'Mobile browser detected. Phone fallback is also available.';
+  }
+
+  if (!window.retellClientJsSdk || !window.retellClientJsSdk.RetellWebClient) {
+    logClient('error', 'Retell Web SDK not available');
+    statusEl.textContent = 'Retell Web SDK is not available.';
+    return;
+  }
+
+  isStarting = true;
   setBusy(true);
-  statusEl.textContent = 'Preparing audio...';
-  logClient('info', 'Call button clicked', { route, mobile, supported: window.Twilio.Device.isSupported });
+  statusEl.textContent = 'Preparing microphone...';
+  logClient('info', 'Call button clicked', {
+    route,
+    mobile,
+    supported: Boolean(window.RTCPeerConnection)
+  });
 
   try {
     await navigator.mediaDevices.getUserMedia({ audio: true });
     logClient('info', 'Microphone access granted');
 
-    if (!device) {
-      const tokenPayload = await fetchToken();
-      logClient('info', 'Voice token received', {
-        identity: tokenPayload.identity,
-        expiresInSeconds: tokenPayload.expiresInSeconds
-      });
-
-      device = new window.Twilio.Device(tokenPayload.token, {
-        appName: 'call-connector-tocumen',
-        appVersion: '1.0.0',
-        logLevel: 1
-      });
-
-      device.on('registered', () => {
-        deviceReady = true;
-        statusEl.textContent = 'Ready to connect';
-        logClient('info', 'Twilio device registered');
-      });
-
-      device.on('registering', () => {
-        statusEl.textContent = 'Registering voice device...';
-        logClient('info', 'Twilio device registering');
-      });
-
-      device.on('unregistered', () => {
-        deviceReady = false;
-        logClient('warn', 'Twilio device unregistered');
-      });
-
-      device.on('error', (error) => {
-        logClient('error', 'Twilio device error', serializeError(error));
-        statusEl.textContent = `Error: ${error.message}`;
-        setBusy(false);
-      });
-
-      device.on('tokenWillExpire', async () => {
-        try {
-          const tokenPayload = await fetchToken();
-          await device.updateToken(tokenPayload.token);
-          logClient('info', 'Twilio token refreshed');
-        } catch (error) {
-          console.error('Token refresh failed', error);
-          logClient('error', 'Token refresh failed', serializeError(error));
-        }
-      });
+    if (!client) {
+      client = new window.retellClientJsSdk.RetellWebClient();
+      bindClientEvents(client);
     }
 
-    if (!deviceReady) {
-      statusEl.textContent = 'Registering voice device...';
-      await device.register();
+    const payload = await createWebCall();
+    logClient('info', 'Retell web call token received', {
+      callId: payload.callId,
+      agentId: payload.agentId,
+      expiresInSeconds: payload.expiresInSeconds
+    });
+
+    statusEl.textContent = 'Connecting to agent...';
+    logClient('info', 'Starting Retell web call', {
+      route,
+      callId: payload.callId,
+      agentId: payload.agentId
+    });
+
+    await client.startCall({
+      accessToken: payload.accessToken
+    });
+
+    if (typeof client.startAudioPlayback === 'function') {
+      await client.startAudioPlayback();
     }
-
-    statusEl.textContent = 'Connecting call...';
-    logClient('info', 'Starting outbound connection', { route });
-    activeCall = await device.connect({
-      params: { route }
-    });
-
-    logClient('info', 'Twilio call object created');
-
-    activeCall.on('accept', () => {
-      statusEl.textContent = 'Connected';
-      callButton.disabled = true;
-      hangupButton.disabled = false;
-      logClient('info', 'Call accepted');
-    });
-
-    activeCall.on('disconnect', () => {
-      statusEl.textContent = 'Call ended';
-      activeCall = null;
-      setBusy(false);
-      logClient('info', 'Call disconnected');
-    });
-
-    activeCall.on('cancel', () => {
-      statusEl.textContent = 'Call canceled';
-      activeCall = null;
-      setBusy(false);
-      logClient('warn', 'Call canceled');
-    });
-
-    activeCall.on('reject', () => {
-      statusEl.textContent = 'Call rejected';
-      activeCall = null;
-      setBusy(false);
-      logClient('warn', 'Call rejected');
-    });
-
-    activeCall.on('error', (error) => {
-      statusEl.textContent = `Call error: ${error.message}`;
-      activeCall = null;
-      setBusy(false);
-      logClient('error', 'Call error', serializeError(error));
-    });
   } catch (error) {
     console.error(error);
     statusEl.textContent = error.message || 'Call could not be started.';
     setBusy(false);
+    isStarting = false;
     logClient('error', 'Call start failed', serializeError(error));
   }
 }
 
 function hangUp() {
-  if (!device) {
+  if (!client) {
     return;
   }
 
-  device.disconnectAll();
-  activeCall = null;
+  client.stopCall();
+  callActive = false;
+  isStarting = false;
   statusEl.textContent = 'Call ended';
   setBusy(false);
+  logClient('info', 'Call ended by user');
 }
 
-async function fetchToken() {
-  const response = await fetch('/voice/token', {
-    credentials: 'omit'
+async function createWebCall() {
+  const response = await fetch('/retell/web-call', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    credentials: 'omit',
+    body: JSON.stringify({ route })
   });
 
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
-    throw new Error(payload.error || 'Could not retrieve access token.');
+    throw new Error(payload.error || 'Could not start the Retell web call.');
   }
 
   return response.json();
@@ -200,7 +149,7 @@ function serializeError(error) {
     code: error?.code,
     causes: error?.causes,
     explanation: error?.explanation,
-    solution: error?.solutions
+    solution: error?.solutions || error?.solution
   };
 }
 
@@ -212,4 +161,52 @@ function logClient(level, message, details) {
     },
     body: JSON.stringify({ level, message, details })
   }).catch(() => {});
+}
+
+function bindClientEvents(retellClient) {
+  retellClient.on('call_started', () => {
+    callActive = true;
+    isStarting = false;
+    statusEl.textContent = 'Call started';
+    callButton.disabled = true;
+    hangupButton.disabled = false;
+    logClient('info', 'Retell call started');
+  });
+
+  retellClient.on('call_ready', () => {
+    statusEl.textContent = 'Connected';
+    callButton.disabled = true;
+    hangupButton.disabled = false;
+    logClient('info', 'Retell call ready');
+  });
+
+  retellClient.on('call_ended', () => {
+    callActive = false;
+    isStarting = false;
+    statusEl.textContent = 'Call ended';
+    setBusy(false);
+    logClient('info', 'Retell call ended');
+  });
+
+  retellClient.on('agent_start_talking', () => {
+    statusEl.textContent = 'Agent speaking...';
+    logClient('info', 'Agent started talking');
+  });
+
+  retellClient.on('agent_stop_talking', () => {
+    statusEl.textContent = 'Listening...';
+    logClient('info', 'Agent stopped talking');
+  });
+
+  retellClient.on('metadata', (metadata) => {
+    logClient('info', 'Retell metadata received', metadata || null);
+  });
+
+  retellClient.on('error', (error) => {
+    callActive = false;
+    isStarting = false;
+    statusEl.textContent = error?.message || String(error || 'Call failed');
+    setBusy(false);
+    logClient('error', 'Retell web client error', serializeError(error));
+  });
 }
