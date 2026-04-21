@@ -60,6 +60,17 @@ The sample in this repo follows that recommendation.
 6. Twilio sends the outbound webhook to your TwiML App Voice URL.
 7. Your `/voice/twiml/outbound` endpoint returns TwiML to dial the real destination.
 
+### Destination strategies
+
+The widget server can route the browser call to four destination types:
+
+- `+15557654321` for a regular PSTN number
+- `client:agent-desktop` for a Twilio Voice SDK user
+- `app:APxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` for a TwiML App in Twilio
+- `sip:agent@example.com` for a SIP endpoint
+
+If your target is already inside Twilio, the highest-probability route is usually **`client:` or `app:`**, because it avoids the PSTN leg that can trigger carrier, compliance, or fraud blocking.
+
 ## Security rules you should keep
 
 - Never generate Twilio access tokens in the browser.
@@ -92,6 +103,19 @@ https://your-widget-domain.example/voice/status
 
 4. Put the TwiML App SID into `.env`.
 5. Set `TWILIO_CALLER_ID` to a Twilio number or a verified caller ID you control.
+6. Set `DEFAULT_DESTINATION` to the route you want the browser call to reach.
+
+For Twilio-internal routing, examples are:
+
+```text
+DEFAULT_DESTINATION=client:agent-desktop
+```
+
+or
+
+```text
+DEFAULT_DESTINATION=app:APxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
 
 ## Local setup
 
@@ -113,6 +137,8 @@ Use a callback flow instead of browser WebRTC if any of these are true:
 - The client only needs "Call me now" and not true in-browser audio.
 
 In that model, the website submits a phone number to your backend, and your backend starts the call with Twilio's Calls API, which can create outbound calls directly with a `POST` to the Calls resource.
+
+If your destination is another Twilio workflow in the same account, prefer routing to a **TwiML App** or **Voice SDK client** before falling back to a PSTN number.
 
 ## Current Twilio references used
 

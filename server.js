@@ -161,6 +161,22 @@ app.post('/voice/twiml/outbound', (req, res) => {
       action: `${getBaseUrl(req)}/voice/dial-action?route=${encodeURIComponent(route)}`
     });
 
+    if (destination.startsWith('app:')) {
+      const application = dial.application({
+        copyParentTo: true
+      });
+      application.applicationSid(destination.replace(/^app:/, ''));
+      return;
+    }
+
+    if (destination.startsWith('application:')) {
+      const application = dial.application({
+        copyParentTo: true
+      });
+      application.applicationSid(destination.replace(/^application:/, ''));
+      return;
+    }
+
     if (destination.startsWith('client:')) {
       dial.client(destination.replace(/^client:/, ''));
       return;
