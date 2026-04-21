@@ -197,6 +197,21 @@ app.post('/voice/twiml/outbound', (req, res) => {
   });
 });
 
+app.all('/voice/twiml/receiver-test', (req, res) => {
+  console.log(`[voice-receiver-test] body=${JSON.stringify(sanitizeWebhookBody(req.body || {}))}`);
+
+  respondWithVoiceResponse(res, (voiceResponse) => {
+    voiceResponse.say(
+      {
+        voice: 'alice'
+      },
+      'Connection successful. Your internal Twilio application route is working.'
+    );
+    voiceResponse.pause({ length: 5 });
+    voiceResponse.hangup();
+  });
+});
+
 app.post('/voice/dial-action', (req, res) => {
   const status = String(req.body.DialCallStatus || '').toLowerCase();
   console.log(

@@ -71,6 +71,22 @@ The widget server can route the browser call to four destination types:
 
 If your target is already inside Twilio, the highest-probability route is usually **`client:` or `app:`**, because it avoids the PSTN leg that can trigger carrier, compliance, or fraud blocking.
 
+### Internal app test route
+
+To validate that `<Dial><Application>` works before wiring your real receiving workflow, point a second TwiML App's Voice URL to:
+
+```text
+https://your-widget-domain.example/voice/twiml/receiver-test
+```
+
+Then set:
+
+```text
+DEFAULT_DESTINATION=app:THAT_SECOND_TWIML_APP_SID
+```
+
+If the browser caller hears "Connection successful", your app-to-app routing works and any remaining error is inside the real receiving TwiML App's logic.
+
 ## Security rules you should keep
 
 - Never generate Twilio access tokens in the browser.
