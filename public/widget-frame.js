@@ -94,13 +94,13 @@ async function startCall() {
 
   if (!webCallSdk || !ClientConstructor) {
     logClient('error', 'Web call SDK not available');
-    statusEl.textContent = 'Web call engine is not available.';
+    statusEl.textContent = 'El motor de voz no esta disponible.';
     return;
   }
 
   isStarting = true;
   setBusy(true);
-  statusEl.textContent = 'Preparing microphone...';
+  statusEl.textContent = 'Preparando microfono...';
   logClient('info', 'Call button clicked', {
     route,
     mobile,
@@ -123,7 +123,7 @@ async function startCall() {
       expiresInSeconds: payload.expiresInSeconds
     });
 
-    statusEl.textContent = 'Connecting to agent...';
+    statusEl.textContent = 'Conectando con el asistente...';
     logClient('info', 'Starting voice session', {
       route,
       callId: payload.callId,
@@ -139,7 +139,7 @@ async function startCall() {
     }
   } catch (error) {
     console.error(error);
-    statusEl.textContent = error.message || 'Call could not be started.';
+    statusEl.textContent = error.message || 'No se pudo iniciar la llamada.';
     setBusy(false);
     isStarting = false;
     logClient('error', 'Call start failed', serializeError(error));
@@ -154,7 +154,7 @@ function hangUp() {
   client.stopCall();
   callActive = false;
   isStarting = false;
-  statusEl.textContent = 'Call ended';
+  statusEl.textContent = 'Llamada finalizada';
   setBusy(false);
   logClient('info', 'Call ended by user');
 }
@@ -221,14 +221,14 @@ function bindClientEvents(sessionClient) {
   sessionClient.on('call_started', () => {
     callActive = true;
     isStarting = false;
-    statusEl.textContent = 'Call started';
+    statusEl.textContent = 'Llamada iniciada';
     callButton.disabled = true;
     hangupButton.disabled = false;
     logClient('info', 'Call started');
   });
 
   sessionClient.on('call_ready', () => {
-    statusEl.textContent = 'Connected';
+    statusEl.textContent = 'Conectado';
     callButton.disabled = true;
     hangupButton.disabled = false;
     logClient('info', 'Call ready');
@@ -237,18 +237,18 @@ function bindClientEvents(sessionClient) {
   sessionClient.on('call_ended', () => {
     callActive = false;
     isStarting = false;
-    statusEl.textContent = 'Call ended';
+    statusEl.textContent = 'Llamada finalizada';
     setBusy(false);
     logClient('info', 'Call ended');
   });
 
   sessionClient.on('agent_start_talking', () => {
-    statusEl.textContent = 'Agent speaking...';
+    statusEl.textContent = 'Asistente hablando...';
     logClient('info', 'Agent started talking');
   });
 
   sessionClient.on('agent_stop_talking', () => {
-    statusEl.textContent = 'Listening...';
+    statusEl.textContent = 'Escuchando...';
     logClient('info', 'Agent stopped talking');
   });
 
@@ -259,7 +259,7 @@ function bindClientEvents(sessionClient) {
   sessionClient.on('error', (error) => {
     callActive = false;
     isStarting = false;
-    statusEl.textContent = error?.message || String(error || 'Call failed');
+    statusEl.textContent = error?.message || String(error || 'La llamada fallo');
     setBusy(false);
     logClient('error', 'Web call client error', serializeError(error));
   });
