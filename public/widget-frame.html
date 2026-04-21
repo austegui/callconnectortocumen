@@ -1,33 +1,33 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Voice Widget</title>
+    <title>Asistente de Voz</title>
     <link rel="stylesheet" href="/widget-frame.css" />
   </head>
   <body>
     <main class="widget">
       <div class="widget__card">
-        <p class="widget__eyebrow">AI Voice Assistant</p>
-        <h1 class="widget__title" id="title">Talk to us</h1>
+        <p class="widget__eyebrow">Asistente de Voz</p>
+        <h1 class="widget__title" id="title">Habla con Nosotros</h1>
         <p class="widget__body" id="body">
-          Start a browser conversation with our assistant. We will ask for microphone access.
+          Inicia una conversacion por voz desde el navegador. Te solicitaremos acceso al microfono.
         </p>
 
-        <div class="widget__status" id="status">Ready</div>
+      <div class="widget__status" id="status">Listo</div>
 
         <div class="widget__actions">
-          <button class="widget__button" id="callButton" type="button">Call now</button>
+          <button class="widget__button" id="callButton" type="button">Iniciar Llamada</button>
           <button class="widget__secondary" id="hangupButton" type="button" disabled>
-            Hang up
+            Finalizar
           </button>
         </div>
 
-        <a class="widget__fallback hidden" id="fallbackLink" href="#">Call by phone instead</a>
+        <a class="widget__fallback hidden" id="fallbackLink" href="#">Llamar por telefono</a>
 
         <p class="widget__fineprint" id="fineprint">
-          Powered by Inferencia Digital. On mobile, use the phone fallback when available.
+          Operado por Inferencia Digital.
         </p>
       </div>
     </main>

@@ -6,7 +6,7 @@
     const iframe = document.createElement('iframe');
 
     iframe.src = buildFrameUrl(normalized);
-    iframe.title = normalized.title || 'Voice Assistant';
+    iframe.title = normalized.title || 'Asistente de Voz';
     iframe.allow = 'microphone';
     iframe.setAttribute('scrolling', 'no');
     iframe.style.border = '0';
@@ -51,15 +51,15 @@
       container: options.container || null,
       mode,
       route: options.route || 'default',
-      title: options.title || 'Talk to Us',
+      title: options.title || 'Habla con Nosotros',
       bodyText:
         options.bodyText ||
-        'Start a browser conversation with our assistant. We will ask for microphone access.',
-      buttonText: options.buttonText || 'Start Call',
-      eyebrowText: options.eyebrowText || 'AI Voice Assistant',
+        'Inicia una conversacion por voz desde el navegador. Te solicitaremos acceso al microfono.',
+      buttonText: options.buttonText || 'Iniciar Llamada',
+      eyebrowText: options.eyebrowText || 'Asistente de Voz',
       fineprintText:
         options.fineprintText ||
-        'Powered by Inferencia Digital. On mobile, use the phone fallback when available.',
+        'Operado por Inferencia Digital.',
       showFineprint: options.showFineprint !== false,
       accent: options.color || options.accent || '#0f766e',
       buttonTextColor: options.buttonTextColor || '#ffffff',
@@ -164,9 +164,9 @@
       container: script.dataset.container || null,
       mode: script.dataset.mode || 'floating',
       route: script.dataset.route || 'default',
-      title: script.dataset.title || 'Talk to Us',
+      title: script.dataset.title || 'Habla con Nosotros',
       bodyText: script.dataset.bodyText,
-      buttonText: script.dataset.buttonText || 'Start Call',
+      buttonText: script.dataset.buttonText || 'Iniciar Llamada',
       eyebrowText: script.dataset.eyebrowText,
       fineprintText: script.dataset.fineprintText,
       showFineprint: script.dataset.showFineprint !== 'false',

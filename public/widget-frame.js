@@ -1,7 +1,7 @@
 const params = new URLSearchParams(window.location.search);
 const route = params.get('route') || 'default';
-const title = params.get('title') || 'Talk to us';
-const buttonText = params.get('buttonText') || 'Call now';
+const title = params.get('title') || 'Habla con Nosotros';
+const buttonText = params.get('buttonText') || 'Iniciar Llamada';
 const accent = params.get('accent') || '#0f766e';
 const fallbackNumber = params.get('fallbackNumber') || '';
 
@@ -21,7 +21,7 @@ let isStarting = false;
 titleEl.textContent = title;
 bodyEl.textContent =
   params.get('bodyText') ||
-  'Start a browser conversation with our assistant. We will ask for microphone access.';
+  'Inicia una conversacion por voz desde el navegador. Te solicitaremos acceso al microfono.';
 callButton.textContent = buttonText;
 document.documentElement.style.setProperty('--accent', accent);
 document.documentElement.style.setProperty('--accent-strong', darkenColor(accent));
@@ -87,7 +87,7 @@ async function startCall() {
   }
 
   if (mobile && fallbackNumber) {
-    statusEl.textContent = 'Mobile browser detected. Phone fallback is also available.';
+    statusEl.textContent = 'Navegador movil detectado. La opcion por telefono tambien esta disponible.';
   }
 
   const ClientConstructor = getWebCallClientConstructor();
@@ -171,7 +171,7 @@ async function createWebCall() {
 
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
-    throw new Error(payload.error || 'Could not start the voice session.');
+    throw new Error(payload.error || 'No se pudo iniciar la sesion de voz.');
   }
 
   return response.json();
