@@ -22,7 +22,7 @@ This avoids the PSTN leg entirely, which is exactly where Twilio-to-phone-number
 
 ```html
 <script
-  src="https://your-widget-domain.example/embed.js"
+  src="https://tocumenwebcall.inferencia.digital/embed.js"
   data-route="sales"
   data-title="Talk to Sales"
   data-button-text="Start Call"
@@ -57,7 +57,7 @@ Optional:
 
 ```text
 ALLOWED_ORIGINS=https://client-site.example
-BASE_URL=https://your-widget-domain.example
+BASE_URL=https://tocumenwebcall.inferencia.digital
 ```
 
 ## Files in this starter
