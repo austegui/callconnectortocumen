@@ -8,6 +8,12 @@
   --muted: #5f7388;
   --shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
   --bg: radial-gradient(circle at top left, #ecfeff, #f8fafc 60%);
+  --status-bg: rgba(255, 255, 255, 0.75);
+  --button-text: #ffffff;
+  --secondary-bg: #ffffff;
+  --secondary-text: #17324d;
+  --radius: 24px;
+  --font-family: "Segoe UI", Arial, sans-serif;
 }
 
 * {
@@ -17,7 +23,7 @@
 html,
 body {
   margin: 0;
-  font-family: "Segoe UI", Arial, sans-serif;
+  font-family: var(--font-family);
   background: transparent;
 }
 
@@ -34,7 +40,7 @@ body {
   min-height: 100vh;
   padding: 20px;
   border: 1px solid var(--border);
-  border-radius: 24px;
+  border-radius: var(--radius);
   background: var(--bg);
   box-shadow: var(--shadow);
   color: var(--text);
@@ -66,7 +72,7 @@ body {
   margin-bottom: 16px;
   padding: 12px 14px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.75);
+  background: var(--status-bg);
   border: 1px solid var(--border);
   font-size: 14px;
 }
@@ -93,15 +99,15 @@ body {
 
 .widget__button {
   border: 0;
-  color: #ffffff;
+  color: var(--button-text);
   background: linear-gradient(135deg, var(--accent), var(--accent-strong));
   cursor: pointer;
 }
 
 .widget__secondary {
   border: 1px solid var(--border);
-  background: #ffffff;
-  color: var(--text);
+  background: var(--secondary-bg);
+  color: var(--secondary-text);
   cursor: pointer;
 }
 

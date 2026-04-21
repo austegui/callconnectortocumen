@@ -6,6 +6,8 @@ const accent = params.get('accent') || '#0f766e';
 const fallbackNumber = params.get('fallbackNumber') || '';
 
 const titleEl = document.getElementById('title');
+const bodyEl = document.getElementById('body');
+const fineprintEl = document.getElementById('fineprint');
 const statusEl = document.getElementById('status');
 const callButton = document.getElementById('callButton');
 const hangupButton = document.getElementById('hangupButton');
@@ -17,9 +19,58 @@ let callActive = false;
 let isStarting = false;
 
 titleEl.textContent = title;
+bodyEl.textContent =
+  params.get('bodyText') ||
+  'Start a browser conversation with our assistant. We will ask for microphone access.';
 callButton.textContent = buttonText;
 document.documentElement.style.setProperty('--accent', accent);
 document.documentElement.style.setProperty('--accent-strong', darkenColor(accent));
+document.documentElement.style.setProperty('--button-text', params.get('buttonTextColor') || '#ffffff');
+document.documentElement.style.setProperty(
+  '--bg',
+  params.get('background') || 'radial-gradient(circle at top left, #ecfeff, #f8fafc 60%)'
+);
+document.documentElement.style.setProperty('--surface', params.get('surface') || '#ffffff');
+document.documentElement.style.setProperty('--border', params.get('borderColor') || '#d9e2ec');
+document.documentElement.style.setProperty('--text', params.get('textColor') || '#17324d');
+document.documentElement.style.setProperty('--muted', params.get('mutedColor') || '#5f7388');
+document.documentElement.style.setProperty(
+  '--shadow',
+  params.get('shadow') || '0 18px 40px rgba(15, 23, 42, 0.18)'
+);
+document.documentElement.style.setProperty(
+  '--status-bg',
+  params.get('statusBackground') || 'rgba(255, 255, 255, 0.75)'
+);
+document.documentElement.style.setProperty(
+  '--secondary-bg',
+  params.get('secondaryBackground') || '#ffffff'
+);
+document.documentElement.style.setProperty(
+  '--secondary-text',
+  params.get('secondaryTextColor') || '#17324d'
+);
+document.documentElement.style.setProperty('--radius', params.get('borderRadius') || '24px');
+document.documentElement.style.setProperty(
+  '--font-family',
+  params.get('fontFamily') || '"Segoe UI", Arial, sans-serif'
+);
+
+const eyebrowText = params.get('eyebrowText');
+if (eyebrowText) {
+  const eyebrowEl = document.querySelector('.widget__eyebrow');
+  if (eyebrowEl) {
+    eyebrowEl.textContent = eyebrowText;
+  }
+}
+
+const fineprintText = params.get('fineprintText');
+const showFineprint = params.get('showFineprint') !== 'false';
+if (!showFineprint) {
+  fineprintEl.classList.add('hidden');
+} else if (fineprintText) {
+  fineprintEl.textContent = fineprintText;
+}
 
 const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 if (mobile && fallbackNumber) {

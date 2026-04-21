@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Inferencia Digital Advanced Embed</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        padding: 48px 24px;
+        font-family: "Inter", "Segoe UI", Arial, sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(15, 118, 110, 0.12), transparent 28%),
+          linear-gradient(180deg, #f8fbfd 0%, #eef4f8 100%);
+        color: #12324a;
+      }
+
+      .page {
+        width: min(1100px, 100%);
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(340px, 420px);
+        gap: 32px;
+        align-items: start;
+      }
+
+      .content {
+        padding-top: 24px;
+      }
+
+      .eyebrow {
+        display: inline-block;
+        margin: 0 0 14px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(15, 118, 110, 0.12);
+        color: #0f766e;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0 0 16px;
+        font-size: clamp(40px, 6vw, 72px);
+        line-height: 0.95;
+        letter-spacing: -0.05em;
+      }
+
+      .content p {
+        max-width: 58ch;
+        margin: 0 0 18px;
+        color: #5f7388;
+        font-size: 18px;
+        line-height: 1.8;
+      }
+
+      .widget-shell {
+        min-height: 520px;
+        padding: 18px;
+        border-radius: 28px;
+        background: rgba(255, 255, 255, 0.78);
+        border: 1px solid rgba(18, 50, 74, 0.08);
+        box-shadow: 0 24px 50px rgba(18, 50, 74, 0.12);
+        backdrop-filter: blur(14px);
+      }
+
+      #airport-voice-widget {
+        width: 100%;
+        min-height: 484px;
+      }
+
+      @media (max-width: 900px) {
+        .page {
+          grid-template-columns: 1fr;
+        }
+
+        .widget-shell {
+          min-height: 460px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="content">
+        <span class="eyebrow">Custom Embed Example</span>
+        <h1>Voice assistant section built to match the site design.</h1>
+        <p>
+          This example mounts the assistant into a custom container instead of floating it in the
+          corner. The client can control the surrounding layout, spacing, and page composition while
+          your hosted widget handles the live voice session.
+        </p>
+        <p>
+          Their team can edit the mount options below to change title, body copy, accent color,
+          font, border radius, shadows, and the overall presentation without changing your backend.
+        </p>
+      </section>
+
+      <aside class="widget-shell">
+        <div id="airport-voice-widget"></div>
+      </aside>
+    </main>
+
+    <script
+      src="https://sea-lion-app-945v5.ondigitalocean.app/embed.js"
+      data-auto-init="false"
+    ></script>
+    <script>
+      window.InferenciaDigitalVoice.mount({
+        container: "#airport-voice-widget",
+        mode: "inline",
+        title: "Talk to Us",
+        bodyText: "Start a browser conversation with our assistant. We will ask for microphone access.",
+        buttonText: "Start Call",
+        eyebrowText: "Airport Voice Assistant",
+        fineprintText: "Operated by Inferencia Digital.",
+        showFineprint: true,
+        color: "#0f766e",
+        buttonTextColor: "#ffffff",
+        background: "linear-gradient(180deg, #f4fbfb 0%, #eef5fb 100%)",
+        borderColor: "#d6e3ed",
+        textColor: "#17324d",
+        mutedColor: "#6f8194",
+        statusBackground: "rgba(255,255,255,0.82)",
+        secondaryBackground: "#ffffff",
+        secondaryTextColor: "#17324d",
+        shadow: "0 22px 45px rgba(15, 23, 42, 0.12)",
+        borderRadius: "26px",
+        fontFamily: "Inter, Segoe UI, Arial, sans-serif",
+        height: "484px",
+        mobileHeight: "440px"
+      });
+    </script>
+  </body>
+</html>

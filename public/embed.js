@@ -1,47 +1,218 @@
 (function () {
-  const currentScript =
-    document.currentScript ||
-    Array.from(document.getElementsByTagName('script')).slice(-1)[0];
+  const globalName = 'InferenciaDigitalVoice';
 
-  if (!currentScript) {
-    return;
+  function mount(options) {
+    const normalized = normalizeOptions(options || {});
+    const iframe = document.createElement('iframe');
+
+    iframe.src = buildFrameUrl(normalized);
+    iframe.title = normalized.title || 'Voice Assistant';
+    iframe.allow = 'microphone';
+    iframe.setAttribute('scrolling', 'no');
+    iframe.style.border = '0';
+    iframe.style.background = 'transparent';
+    iframe.style.overflow = 'hidden';
+    iframe.style.display = 'block';
+
+    applyIframeLayout(iframe, normalized);
+
+    const container = resolveContainer(normalized.container);
+    container.appendChild(iframe);
+
+    return {
+      iframe,
+      destroy() {
+        iframe.remove();
+      }
+    };
   }
 
-  const scriptUrl = new URL(currentScript.src, window.location.href);
-  const baseUrl = scriptUrl.origin;
-  const route = currentScript.dataset.route || 'default';
-  const title = currentScript.dataset.title || 'Talk to us';
-  const buttonText = currentScript.dataset.buttonText || 'Call now';
-  const accent = currentScript.dataset.color || '#0f766e';
-  const fallbackNumber = currentScript.dataset.fallbackNumber || '';
+  function bootFromCurrentScript() {
+    const currentScript =
+      document.currentScript ||
+      Array.from(document.getElementsByTagName('script')).slice(-1)[0];
 
-  const iframe = document.createElement('iframe');
-  iframe.src =
-    `${baseUrl}/widget/frame?route=${encodeURIComponent(route)}` +
-    `&title=${encodeURIComponent(title)}` +
-    `&buttonText=${encodeURIComponent(buttonText)}` +
-    `&accent=${encodeURIComponent(accent)}` +
-    `&fallbackNumber=${encodeURIComponent(fallbackNumber)}`;
-  iframe.title = title;
-  iframe.allow = 'microphone';
-  iframe.style.position = 'fixed';
-  iframe.style.right = '20px';
-  iframe.style.bottom = '20px';
-  iframe.style.width = '360px';
-  iframe.style.height = '460px';
-  iframe.style.border = '0';
-  iframe.style.zIndex = '999999';
-  iframe.style.background = 'transparent';
-  iframe.style.overflow = 'hidden';
+    if (!currentScript || currentScript.dataset.autoInit === 'false') {
+      return;
+    }
 
-  const mobile = window.matchMedia('(max-width: 640px)').matches;
-  if (mobile) {
-    iframe.style.right = '12px';
-    iframe.style.left = '12px';
-    iframe.style.bottom = '12px';
-    iframe.style.width = 'auto';
-    iframe.style.height = '400px';
+    mount(optionsFromScript(currentScript));
   }
 
-  document.body.appendChild(iframe);
+  function normalizeOptions(options) {
+    const scriptUrl = new URL(
+      options.scriptSrc || findCurrentScriptSrc() || '/embed.js',
+      window.location.href
+    );
+    const mode = options.mode === 'inline' ? 'inline' : 'floating';
+
+    return {
+      baseUrl: options.baseUrl || scriptUrl.origin,
+      container: options.container || null,
+      mode,
+      route: options.route || 'default',
+      title: options.title || 'Talk to Us',
+      bodyText:
+        options.bodyText ||
+        'Start a browser conversation with our assistant. We will ask for microphone access.',
+      buttonText: options.buttonText || 'Start Call',
+      eyebrowText: options.eyebrowText || 'AI Voice Assistant',
+      fineprintText:
+        options.fineprintText ||
+        'Powered by Inferencia Digital. On mobile, use the phone fallback when available.',
+      showFineprint: options.showFineprint !== false,
+      accent: options.color || options.accent || '#0f766e',
+      buttonTextColor: options.buttonTextColor || '#ffffff',
+      background:
+        options.background || 'radial-gradient(circle at top left, #ecfeff, #f8fafc 60%)',
+      surface: options.surface || '#ffffff',
+      borderColor: options.borderColor || '#d9e2ec',
+      textColor: options.textColor || '#17324d',
+      mutedColor: options.mutedColor || '#5f7388',
+      shadow: options.shadow || '0 18px 40px rgba(15, 23, 42, 0.18)',
+      statusBackground: options.statusBackground || 'rgba(255, 255, 255, 0.75)',
+      secondaryBackground: options.secondaryBackground || '#ffffff',
+      secondaryTextColor: options.secondaryTextColor || '#17324d',
+      borderRadius: String(options.borderRadius || '24px'),
+      fontFamily: options.fontFamily || '"Segoe UI", Arial, sans-serif',
+      width: normalizeSize(options.width || '360px'),
+      height: normalizeSize(options.height || '460px'),
+      mobileHeight: normalizeSize(options.mobileHeight || '400px'),
+      right: normalizeSize(options.right || '20px'),
+      left: normalizeSize(options.left || ''),
+      bottom: normalizeSize(options.bottom || '20px'),
+      top: normalizeSize(options.top || ''),
+      zIndex: String(options.zIndex || '999999')
+    };
+  }
+
+  function buildFrameUrl(options) {
+    const url = new URL('/widget/frame', options.baseUrl);
+
+    const query = {
+      route: options.route,
+      title: options.title,
+      bodyText: options.bodyText,
+      buttonText: options.buttonText,
+      eyebrowText: options.eyebrowText,
+      fineprintText: options.fineprintText,
+      showFineprint: String(options.showFineprint),
+      accent: options.accent,
+      buttonTextColor: options.buttonTextColor,
+      background: options.background,
+      surface: options.surface,
+      borderColor: options.borderColor,
+      textColor: options.textColor,
+      mutedColor: options.mutedColor,
+      shadow: options.shadow,
+      statusBackground: options.statusBackground,
+      secondaryBackground: options.secondaryBackground,
+      secondaryTextColor: options.secondaryTextColor,
+      borderRadius: options.borderRadius,
+      fontFamily: options.fontFamily
+    };
+
+    Object.entries(query).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && value !== '') {
+        url.searchParams.set(key, value);
+      }
+    });
+
+    return url.toString();
+  }
+
+  function applyIframeLayout(iframe, options) {
+    const mobile = window.matchMedia('(max-width: 640px)').matches;
+
+    if (options.mode === 'inline') {
+      iframe.style.position = 'relative';
+      iframe.style.width = '100%';
+      iframe.style.height = mobile ? options.mobileHeight : options.height;
+      iframe.style.minHeight = mobile ? options.mobileHeight : options.height;
+      return;
+    }
+
+    iframe.style.position = 'fixed';
+    iframe.style.width = mobile ? 'auto' : options.width;
+    iframe.style.height = mobile ? options.mobileHeight : options.height;
+    iframe.style.zIndex = options.zIndex;
+    iframe.style.right = mobile ? '12px' : options.right;
+    iframe.style.left = mobile ? '12px' : options.left;
+    iframe.style.bottom = mobile ? '12px' : options.bottom;
+    iframe.style.top = mobile ? '' : options.top;
+  }
+
+  function resolveContainer(container) {
+    if (!container) {
+      return document.body;
+    }
+
+    if (typeof container === 'string') {
+      const element = document.querySelector(container);
+      if (!element) {
+        throw new Error(`InferenciaDigitalVoice container not found: ${container}`);
+      }
+      return element;
+    }
+
+    return container;
+  }
+
+  function optionsFromScript(script) {
+    return {
+      scriptSrc: script.src,
+      container: script.dataset.container || null,
+      mode: script.dataset.mode || 'floating',
+      route: script.dataset.route || 'default',
+      title: script.dataset.title || 'Talk to Us',
+      bodyText: script.dataset.bodyText,
+      buttonText: script.dataset.buttonText || 'Start Call',
+      eyebrowText: script.dataset.eyebrowText,
+      fineprintText: script.dataset.fineprintText,
+      showFineprint: script.dataset.showFineprint !== 'false',
+      color: script.dataset.color,
+      buttonTextColor: script.dataset.buttonTextColor,
+      background: script.dataset.background,
+      surface: script.dataset.surface,
+      borderColor: script.dataset.borderColor,
+      textColor: script.dataset.textColor,
+      mutedColor: script.dataset.mutedColor,
+      shadow: script.dataset.shadow,
+      statusBackground: script.dataset.statusBackground,
+      secondaryBackground: script.dataset.secondaryBackground,
+      secondaryTextColor: script.dataset.secondaryTextColor,
+      borderRadius: script.dataset.borderRadius,
+      fontFamily: script.dataset.fontFamily,
+      width: script.dataset.width,
+      height: script.dataset.height,
+      mobileHeight: script.dataset.mobileHeight,
+      right: script.dataset.right,
+      left: script.dataset.left,
+      bottom: script.dataset.bottom,
+      top: script.dataset.top,
+      zIndex: script.dataset.zIndex
+    };
+  }
+
+  function findCurrentScriptSrc() {
+    const script =
+      document.currentScript ||
+      Array.from(document.getElementsByTagName('script')).slice(-1)[0];
+
+    return script ? script.src : null;
+  }
+
+  function normalizeSize(value) {
+    if (value === null || value === undefined || value === '') {
+      return '';
+    }
+
+    return String(value);
+  }
+
+  window[globalName] = {
+    mount
+  };
+
+  bootFromCurrentScript();
 })();
