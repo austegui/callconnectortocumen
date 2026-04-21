@@ -155,11 +155,17 @@ app.post('/voice/twiml/outbound', (req, res) => {
   }
 
   respondWithVoiceResponse(res, (voiceResponse) => {
-    const dial = voiceResponse.dial({
-      callerId: TWILIO_CALLER_ID,
+    const dialOptions = {
       answerOnBridge: true,
       action: `${getBaseUrl(req)}/voice/dial-action?route=${encodeURIComponent(route)}`
-    });
+    };
+
+    const callerId = getCallerIdForDestination(destination, req);
+    if (callerId) {
+      dialOptions.callerId = callerId;
+    }
+
+    const dial = voiceResponse.dial(dialOptions);
 
     if (destination.startsWith('app:')) {
       const application = dial.application({
@@ -296,4 +302,24 @@ function sanitizeWebhookBody(body) {
   }
 
   return sanitized;
+}
+
+function getCallerIdForDestination(destination, req) {
+  if (!destination) {
+    return TWILIO_CALLER_ID || null;
+  }
+
+  if (destination.startsWith('client:')) {
+    return req.body.From || null;
+  }
+
+  if (destination.startsWith('sip:')) {
+    return 'call-connector';
+  }
+
+  if (destination.startsWith('app:') || destination.startsWith('application:')) {
+    return null;
+  }
+
+  return TWILIO_CALLER_ID || null;
 }
