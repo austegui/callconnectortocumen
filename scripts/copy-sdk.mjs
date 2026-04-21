@@ -23,7 +23,7 @@ const files = [
   },
   {
     source: path.join(root, 'node_modules', 'retell-client-js-sdk', 'dist', 'index.umd.js'),
-    destination: path.join(destinationDir, 'retell-client.umd.js')
+    destination: path.join(destinationDir, 'inferencia-assistant.umd.js')
   }
 ];
 

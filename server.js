@@ -61,12 +61,12 @@ app.get('/healthz', (_req, res) => {
   res.json({ ok: true });
 });
 
-app.get('/debug/retell', (req, res) => {
+app.get('/debug/voice', (req, res) => {
   res.json({
     ok: true,
     baseUrl: getBaseUrl(req),
     config: {
-      hasRetellApiKey: Boolean(RETELL_API_KEY),
+      hasVoiceProviderKey: Boolean(RETELL_API_KEY),
       hasDefaultAgentId: Boolean(DEFAULT_AGENT_ID),
       allowedOrigins: Array.from(allowedOrigins),
       routes: Object.fromEntries(
@@ -85,15 +85,15 @@ app.get('/embed.js', (_req, res) => {
   res.sendFile(path.join(publicDir, 'embed.js'));
 });
 
-app.post('/retell/web-call', async (req, res) => {
+app.post('/voice/session', async (req, res) => {
   if (!retellConfigured()) {
-    console.error('[retell-web-call] missing configuration');
-    return res.status(500).json({ error: 'Retell credentials are not configured.' });
+    console.error('[voice-session] missing configuration');
+    return res.status(500).json({ error: 'Voice credentials are not configured.' });
   }
 
   if (!originIsAllowed(req)) {
     console.error(
-      `[retell-web-call] origin blocked origin=${req.get('origin') || '-'} referer=${req.get('referer') || '-'}`
+      `[voice-session] origin blocked origin=${req.get('origin') || '-'} referer=${req.get('referer') || '-'}`
     );
     return res.status(403).json({ error: 'Origin is not allowed.' });
   }
@@ -102,8 +102,8 @@ app.post('/retell/web-call', async (req, res) => {
   const agentId = routeMap[route] || routeMap.default;
 
   if (!agentId) {
-    console.error(`[retell-web-call] missing agent for route=${route}`);
-    return res.status(500).json({ error: `No Retell agent is configured for route "${route}".` });
+    console.error(`[voice-session] missing agent for route=${route}`);
+    return res.status(500).json({ error: `No voice agent is configured for route "${route}".` });
   }
 
   try {
@@ -112,7 +112,7 @@ app.post('/retell/web-call', async (req, res) => {
     });
 
     console.log(
-      `[retell-web-call] route=${route} agent=${summarizeId(agentId)} callId=${webCall.call_id || '-'}`
+      `[voice-session] route=${route} agent=${summarizeId(agentId)} callId=${webCall.call_id || '-'}`
     );
 
     res.json({
@@ -123,11 +123,11 @@ app.post('/retell/web-call', async (req, res) => {
     });
   } catch (error) {
     console.error(
-      `[retell-web-call] failed route=${route} agent=${summarizeId(agentId)} error=${JSON.stringify(serializeRetellError(error))}`
+      `[voice-session] failed route=${route} agent=${summarizeId(agentId)} error=${JSON.stringify(serializeRetellError(error))}`
     );
     res
       .status(error?.status || 500)
-      .json({ error: extractRetellErrorMessage(error) || 'Retell web call could not be created.' });
+      .json({ error: extractRetellErrorMessage(error) || 'Voice session could not be created.' });
   }
 });
 
@@ -139,10 +139,10 @@ app.post('/client-log', (req, res) => {
   res.sendStatus(204);
 });
 
-app.post('/retell/webhook', (req, res) => {
+app.post('/voice/events', (req, res) => {
   const event = req.body?.event || 'unknown';
   const callId = req.body?.call?.call_id || '-';
-  console.log(`[retell-webhook] event=${event} callId=${callId}`);
+  console.log(`[voice-events] event=${event} callId=${callId}`);
   res.sendStatus(204);
 });
 

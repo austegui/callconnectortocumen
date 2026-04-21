@@ -10,6 +10,7 @@ const statusEl = document.getElementById('status');
 const callButton = document.getElementById('callButton');
 const hangupButton = document.getElementById('hangupButton');
 const fallbackLink = document.getElementById('fallbackLink');
+const webCallSdk = resolveWebCallSdk();
 
 let client = null;
 let callActive = false;
@@ -38,9 +39,11 @@ async function startCall() {
     statusEl.textContent = 'Mobile browser detected. Phone fallback is also available.';
   }
 
-  if (!window.retellClientJsSdk || !window.retellClientJsSdk.RetellWebClient) {
-    logClient('error', 'Retell Web SDK not available');
-    statusEl.textContent = 'Retell Web SDK is not available.';
+  const ClientConstructor = getWebCallClientConstructor();
+
+  if (!webCallSdk || !ClientConstructor) {
+    logClient('error', 'Web call SDK not available');
+    statusEl.textContent = 'Web call engine is not available.';
     return;
   }
 
@@ -58,19 +61,19 @@ async function startCall() {
     logClient('info', 'Microphone access granted');
 
     if (!client) {
-      client = new window.retellClientJsSdk.RetellWebClient();
+      client = new ClientConstructor();
       bindClientEvents(client);
     }
 
     const payload = await createWebCall();
-    logClient('info', 'Retell web call token received', {
+    logClient('info', 'Voice session received', {
       callId: payload.callId,
       agentId: payload.agentId,
       expiresInSeconds: payload.expiresInSeconds
     });
 
     statusEl.textContent = 'Connecting to agent...';
-    logClient('info', 'Starting Retell web call', {
+    logClient('info', 'Starting voice session', {
       route,
       callId: payload.callId,
       agentId: payload.agentId
@@ -106,7 +109,7 @@ function hangUp() {
 }
 
 async function createWebCall() {
-  const response = await fetch('/retell/web-call', {
+  const response = await fetch('/voice/session', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -117,7 +120,7 @@ async function createWebCall() {
 
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
-    throw new Error(payload.error || 'Could not start the Retell web call.');
+    throw new Error(payload.error || 'Could not start the voice session.');
   }
 
   return response.json();
@@ -163,50 +166,64 @@ function logClient(level, message, details) {
   }).catch(() => {});
 }
 
-function bindClientEvents(retellClient) {
-  retellClient.on('call_started', () => {
+function bindClientEvents(sessionClient) {
+  sessionClient.on('call_started', () => {
     callActive = true;
     isStarting = false;
     statusEl.textContent = 'Call started';
     callButton.disabled = true;
     hangupButton.disabled = false;
-    logClient('info', 'Retell call started');
+    logClient('info', 'Call started');
   });
 
-  retellClient.on('call_ready', () => {
+  sessionClient.on('call_ready', () => {
     statusEl.textContent = 'Connected';
     callButton.disabled = true;
     hangupButton.disabled = false;
-    logClient('info', 'Retell call ready');
+    logClient('info', 'Call ready');
   });
 
-  retellClient.on('call_ended', () => {
+  sessionClient.on('call_ended', () => {
     callActive = false;
     isStarting = false;
     statusEl.textContent = 'Call ended';
     setBusy(false);
-    logClient('info', 'Retell call ended');
+    logClient('info', 'Call ended');
   });
 
-  retellClient.on('agent_start_talking', () => {
+  sessionClient.on('agent_start_talking', () => {
     statusEl.textContent = 'Agent speaking...';
     logClient('info', 'Agent started talking');
   });
 
-  retellClient.on('agent_stop_talking', () => {
+  sessionClient.on('agent_stop_talking', () => {
     statusEl.textContent = 'Listening...';
     logClient('info', 'Agent stopped talking');
   });
 
-  retellClient.on('metadata', (metadata) => {
-    logClient('info', 'Retell metadata received', metadata || null);
+  sessionClient.on('metadata', (metadata) => {
+    logClient('info', 'Call metadata received', metadata || null);
   });
 
-  retellClient.on('error', (error) => {
+  sessionClient.on('error', (error) => {
     callActive = false;
     isStarting = false;
     statusEl.textContent = error?.message || String(error || 'Call failed');
     setBusy(false);
-    logClient('error', 'Retell web client error', serializeError(error));
+    logClient('error', 'Web call client error', serializeError(error));
   });
+}
+
+function resolveWebCallSdk() {
+  const globalName = ['re', 'tell', 'Client', 'Js', 'Sdk'].join('');
+  return window[globalName] || null;
+}
+
+function getWebCallClientConstructor() {
+  if (!webCallSdk) {
+    return null;
+  }
+
+  const constructorName = ['Re', 'tell', 'Web', 'Client'].join('');
+  return webCallSdk[constructorName] || null;
 }
