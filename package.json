@@ -1,8 +1,8 @@
 {
-  "name": "retell-web-call-widget",
+  "name": "twilio-transfer-web-call-widget",
   "version": "0.1.0",
   "private": true,
-  "description": "Embeddable Retell web-call website widget starter",
+  "description": "Embeddable Twilio browser-call widget with Retell transfer-ready routing",
   "scripts": {
     "postinstall": "node scripts/copy-sdk.mjs",
     "prepare:sdk": "node scripts/copy-sdk.mjs",
@@ -11,11 +11,9 @@
     "check": "node --check server.js"
   },
   "dependencies": {
+    "@twilio/voice-sdk": "^2.13.1",
     "dotenv": "^16.4.5",
-    "eventemitter3": "^5.0.4",
     "express": "^4.21.2",
-    "livekit-client": "^2.18.4",
-    "retell-client-js-sdk": "^2.0.7",
-    "retell-sdk": "^5.12.0"
+    "twilio": "^5.7.2"
   }
 }

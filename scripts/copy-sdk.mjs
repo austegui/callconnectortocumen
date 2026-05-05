@@ -8,22 +8,8 @@ fs.mkdirSync(destinationDir, { recursive: true });
 
 const files = [
   {
-    source: path.join(
-      root,
-      'node_modules',
-      'eventemitter3',
-      'dist',
-      'eventemitter3.umd.min.js'
-    ),
-    destination: path.join(destinationDir, 'eventemitter3.min.js')
-  },
-  {
-    source: path.join(root, 'node_modules', 'livekit-client', 'dist', 'livekit-client.umd.js'),
-    destination: path.join(destinationDir, 'livekit-client.umd.js')
-  },
-  {
-    source: path.join(root, 'node_modules', 'retell-client-js-sdk', 'dist', 'index.umd.js'),
-    destination: path.join(destinationDir, 'inferencia-assistant.umd.js')
+    source: path.join(root, 'node_modules', '@twilio', 'voice-sdk', 'dist', 'twilio.min.js'),
+    destination: path.join(destinationDir, 'twilio.min.js')
   }
 ];
 

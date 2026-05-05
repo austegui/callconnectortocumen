@@ -12,16 +12,15 @@ const statusEl = document.getElementById('status');
 const callButton = document.getElementById('callButton');
 const hangupButton = document.getElementById('hangupButton');
 const fallbackLink = document.getElementById('fallbackLink');
-const webCallSdk = resolveWebCallSdk();
 
-let client = null;
-let callActive = false;
+let device = null;
+let activeCall = null;
 let isStarting = false;
 
 titleEl.textContent = title;
 bodyEl.textContent =
   params.get('bodyText') ||
-  'Inicia una conversacion por voz desde el navegador. Te solicitaremos acceso al microfono.';
+  'Inicia una llamada desde el navegador. Te solicitaremos acceso al microfono y, si hace falta, la llamada puede transferirse.';
 callButton.textContent = buttonText;
 document.documentElement.style.setProperty('--accent', accent);
 document.documentElement.style.setProperty('--accent-strong', darkenColor(accent));
@@ -80,27 +79,28 @@ if (mobile && fallbackNumber) {
 
 callButton.addEventListener('click', startCall);
 hangupButton.addEventListener('click', hangUp);
+window.addEventListener('beforeunload', () => {
+  if (device) {
+    device.destroy();
+  }
+});
 
 async function startCall() {
-  if (callActive || isStarting) {
+  if (activeCall || isStarting) {
     return;
   }
 
-  if (mobile && fallbackNumber) {
-    statusEl.textContent = 'Navegador movil detectado. La opcion por telefono tambien esta disponible.';
-  }
-
-  const ClientConstructor = getWebCallClientConstructor();
-
-  if (!webCallSdk || !ClientConstructor) {
-    logClient('error', 'Web call SDK not available');
-    statusEl.textContent = 'El motor de voz no esta disponible.';
+  const DeviceConstructor = resolveTwilioDeviceConstructor();
+  if (!DeviceConstructor) {
+    logClient('error', 'Twilio Voice SDK no disponible');
+    setStatus('El motor de voz no esta disponible.');
     return;
   }
 
   isStarting = true;
-  setBusy(true);
-  statusEl.textContent = 'Preparando microfono...';
+  setButtons({ canStart: false, canHangup: false });
+  setStatus('Preparando microfono...');
+
   logClient('info', 'Call button clicked', {
     route,
     mobile,
@@ -111,75 +111,168 @@ async function startCall() {
     await navigator.mediaDevices.getUserMedia({ audio: true });
     logClient('info', 'Microphone access granted');
 
-    if (!client) {
-      client = new ClientConstructor();
-      bindClientEvents(client);
+    const tokenPayload = await fetchVoiceToken();
+    logClient('info', 'Voice token received', {
+      identity: tokenPayload.identity,
+      expiresInSeconds: tokenPayload.expiresInSeconds
+    });
+
+    if (!device) {
+      device = createDevice(DeviceConstructor, tokenPayload.token);
+      bindDeviceEvents(device);
+    } else {
+      await device.updateToken(tokenPayload.token);
+      logClient('info', 'Voice token refreshed');
     }
 
-    const payload = await createWebCall();
-    logClient('info', 'Voice session received', {
-      callId: payload.callId,
-      agentId: payload.agentId,
-      expiresInSeconds: payload.expiresInSeconds
+    setStatus('Conectando con la central...');
+    logClient('info', 'Starting outbound connection', { route });
+
+    activeCall = await device.connect({
+      params: {
+        route
+      }
     });
 
-    statusEl.textContent = 'Conectando con el asistente...';
-    logClient('info', 'Starting voice session', {
-      route,
-      callId: payload.callId,
-      agentId: payload.agentId
-    });
-
-    await client.startCall({
-      accessToken: payload.accessToken
-    });
-
-    if (typeof client.startAudioPlayback === 'function') {
-      await client.startAudioPlayback();
-    }
+    setButtons({ canStart: false, canHangup: true });
+    bindCallEvents(activeCall);
+    logClient('info', 'Twilio call object created');
   } catch (error) {
     console.error(error);
-    statusEl.textContent = error.message || 'No se pudo iniciar la llamada.';
-    setBusy(false);
+    activeCall = null;
     isStarting = false;
+    setButtons({ canStart: true, canHangup: false });
+    setStatus(error.message || 'No se pudo iniciar la llamada.');
     logClient('error', 'Call start failed', serializeError(error));
   }
 }
 
 function hangUp() {
-  if (!client) {
+  if (!activeCall) {
     return;
   }
 
-  client.stopCall();
-  callActive = false;
-  isStarting = false;
-  statusEl.textContent = 'Llamada finalizada';
-  setBusy(false);
+  activeCall.disconnect();
   logClient('info', 'Call ended by user');
 }
 
-async function createWebCall() {
-  const response = await fetch('/voice/session', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    credentials: 'omit',
-    body: JSON.stringify({ route })
+async function fetchVoiceToken() {
+  const response = await fetch(`/voice/token?route=${encodeURIComponent(route)}`, {
+    method: 'GET',
+    credentials: 'omit'
   });
 
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
-    throw new Error(payload.error || 'No se pudo iniciar la sesion de voz.');
+    throw new Error(payload.error || 'No se pudo obtener el acceso de voz.');
   }
 
   return response.json();
 }
 
-function setBusy(isBusy) {
-  callButton.disabled = isBusy;
-  hangupButton.disabled = !isBusy;
+function createDevice(DeviceConstructor, token) {
+  return new DeviceConstructor(token, {
+    appName: 'inferencia-digital-transfer-widget',
+    appVersion: '1.0.0',
+    codecPreferences: ['opus', 'pcmu'],
+    tokenRefreshMs: 30000
+  });
+}
+
+function bindDeviceEvents(voiceDevice) {
+  voiceDevice.on('registering', () => {
+    setStatus('Registrando dispositivo...');
+    logClient('info', 'Twilio device registering');
+  });
+
+  voiceDevice.on('registered', () => {
+    logClient('info', 'Twilio device registered');
+  });
+
+  voiceDevice.on('tokenWillExpire', async () => {
+    try {
+      const tokenPayload = await fetchVoiceToken();
+      await voiceDevice.updateToken(tokenPayload.token);
+      logClient('info', 'Twilio token refreshed');
+    } catch (error) {
+      logClient('error', 'Twilio token refresh failed', serializeError(error));
+    }
+  });
+
+  voiceDevice.on('error', (error) => {
+    activeCall = null;
+    isStarting = false;
+    setButtons({ canStart: true, canHangup: false });
+    setStatus(error?.message || 'La llamada fallo.');
+    logClient('error', 'Twilio device error', serializeError(error));
+  });
+}
+
+function bindCallEvents(call) {
+  call.on('ringing', () => {
+    isStarting = false;
+    setStatus('Timbrando...');
+    setButtons({ canStart: false, canHangup: true });
+    logClient('info', 'Call ringing');
+  });
+
+  call.on('accept', () => {
+    isStarting = false;
+    setStatus('Llamada conectada');
+    setButtons({ canStart: false, canHangup: true });
+    logClient('info', 'Call accepted');
+  });
+
+  call.on('reconnecting', (error) => {
+    setStatus('Reconectando...');
+    logClient('info', 'Call reconnecting', serializeError(error));
+  });
+
+  call.on('reconnected', () => {
+    setStatus('Conexion restablecida');
+    logClient('info', 'Call reconnected');
+  });
+
+  call.on('disconnect', () => {
+    activeCall = null;
+    isStarting = false;
+    setButtons({ canStart: true, canHangup: false });
+    setStatus('Llamada finalizada');
+    logClient('info', 'Call disconnected');
+  });
+
+  call.on('cancel', () => {
+    activeCall = null;
+    isStarting = false;
+    setButtons({ canStart: true, canHangup: false });
+    setStatus('La llamada fue cancelada.');
+    logClient('info', 'Call cancelled');
+  });
+
+  call.on('reject', () => {
+    activeCall = null;
+    isStarting = false;
+    setButtons({ canStart: true, canHangup: false });
+    setStatus('La llamada fue rechazada.');
+    logClient('info', 'Call rejected');
+  });
+
+  call.on('error', (error) => {
+    activeCall = null;
+    isStarting = false;
+    setButtons({ canStart: true, canHangup: false });
+    setStatus(error?.message || 'La llamada fallo.');
+    logClient('error', 'Call error', serializeError(error));
+  });
+}
+
+function setButtons({ canStart, canHangup }) {
+  callButton.disabled = !canStart;
+  hangupButton.disabled = !canHangup;
+}
+
+function setStatus(value) {
+  statusEl.textContent = value;
 }
 
 function darkenColor(hex) {
@@ -200,10 +293,10 @@ function serializeError(error) {
   return {
     name: error?.name || 'Error',
     message: error?.message || 'Unknown error',
-    code: error?.code,
-    causes: error?.causes,
-    explanation: error?.explanation,
-    solution: error?.solutions || error?.solution
+    code: error?.code || error?.twilioError?.code,
+    description: error?.description || error?.explanation || null,
+    causes: error?.causes || null,
+    solutions: error?.solutions || error?.solution || null
   };
 }
 
@@ -217,64 +310,6 @@ function logClient(level, message, details) {
   }).catch(() => {});
 }
 
-function bindClientEvents(sessionClient) {
-  sessionClient.on('call_started', () => {
-    callActive = true;
-    isStarting = false;
-    statusEl.textContent = 'Llamada iniciada';
-    callButton.disabled = true;
-    hangupButton.disabled = false;
-    logClient('info', 'Call started');
-  });
-
-  sessionClient.on('call_ready', () => {
-    statusEl.textContent = 'Conectado';
-    callButton.disabled = true;
-    hangupButton.disabled = false;
-    logClient('info', 'Call ready');
-  });
-
-  sessionClient.on('call_ended', () => {
-    callActive = false;
-    isStarting = false;
-    statusEl.textContent = 'Llamada finalizada';
-    setBusy(false);
-    logClient('info', 'Call ended');
-  });
-
-  sessionClient.on('agent_start_talking', () => {
-    statusEl.textContent = 'Asistente hablando...';
-    logClient('info', 'Agent started talking');
-  });
-
-  sessionClient.on('agent_stop_talking', () => {
-    statusEl.textContent = 'Escuchando...';
-    logClient('info', 'Agent stopped talking');
-  });
-
-  sessionClient.on('metadata', (metadata) => {
-    logClient('info', 'Call metadata received', metadata || null);
-  });
-
-  sessionClient.on('error', (error) => {
-    callActive = false;
-    isStarting = false;
-    statusEl.textContent = error?.message || String(error || 'La llamada fallo');
-    setBusy(false);
-    logClient('error', 'Web call client error', serializeError(error));
-  });
-}
-
-function resolveWebCallSdk() {
-  const globalName = ['re', 'tell', 'Client', 'Js', 'Sdk'].join('');
-  return window[globalName] || null;
-}
-
-function getWebCallClientConstructor() {
-  if (!webCallSdk) {
-    return null;
-  }
-
-  const constructorName = ['Re', 'tell', 'Web', 'Client'].join('');
-  return webCallSdk[constructorName] || null;
+function resolveTwilioDeviceConstructor() {
+  return window.Twilio?.Device || null;
 }

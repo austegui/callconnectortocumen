@@ -12,7 +12,8 @@
         <p class="widget__eyebrow">Asistente de Voz</p>
         <h1 class="widget__title" id="title">Habla con Nosotros</h1>
         <p class="widget__body" id="body">
-          Inicia una conversacion por voz desde el navegador. Te solicitaremos acceso al microfono.
+          Inicia una llamada desde el navegador. Te solicitaremos acceso al microfono y, si hace
+          falta, la llamada puede transferirse.
         </p>
 
       <div class="widget__status" id="status">Listo</div>
@@ -32,13 +33,7 @@
       </div>
     </main>
 
-    <script src="/vendor/eventemitter3.min.js"></script>
-    <script src="/vendor/livekit-client.umd.js"></script>
-    <script>
-      window.eventemitter3 = window.EventEmitter3;
-      window.livekitClient = window.LivekitClient;
-    </script>
-    <script src="/vendor/inferencia-assistant.umd.js"></script>
+    <script src="/vendor/twilio.min.js"></script>
     <script src="/widget-frame.js"></script>
   </body>
 </html>

@@ -54,7 +54,7 @@
       title: options.title || 'Habla con Nosotros',
       bodyText:
         options.bodyText ||
-        'Inicia una conversacion por voz desde el navegador. Te solicitaremos acceso al microfono.',
+        'Inicia una llamada desde el navegador. Te solicitaremos acceso al microfono y, si hace falta, la llamada puede transferirse.',
       buttonText: options.buttonText || 'Iniciar Llamada',
       eyebrowText: options.eyebrowText || 'Asistente de Voz',
       fineprintText:
